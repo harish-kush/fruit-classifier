@@ -3,3 +3,4 @@ model/
 *.h5
 __pycache__
 .vscode
+Fruits_classification.ipynb
