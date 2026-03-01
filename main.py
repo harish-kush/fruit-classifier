@@ -7,34 +7,51 @@ import io
 import os
 import gdown
 
-app = FastAPI()
+# TensorFlow logs off + faster startup
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load model
 MODEL_PATH = "model/fruits_classifier.h5"
 
-# Model folder create
+# Create model folder
 os.makedirs("model", exist_ok=True)
 
-# Download model if not exists
-if not os.path.exists(MODEL_PATH):
 
-    print("Downloading model from Google Drive...")
+# ---------- STARTUP LOAD ----------
+@app.on_event("startup")
+def load_model_startup():
 
-    url = "https://drive.google.com/uc?id=1qbtgJ1V0RxGQZgXVGN-Jb9SkkqnyD8BB"
+    global model
 
-    gdown.download(url, MODEL_PATH, quiet=False)
+    # Download model if not exists
+    if not os.path.exists(MODEL_PATH):
 
-# Load model
-model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        print("Downloading model from Google Drive...")
+
+        url = "https://drive.google.com/uc?id=1qbtgJ1V0RxGQZgXVGN-Jb9SkkqnyD8BB"
+
+        gdown.download(url, MODEL_PATH, quiet=False)
+
+    # Load model
+    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+
+    print("Model Loaded 🚀")
+
+    # Dummy warmup prediction
+    dummy = np.zeros((1,224,224,3))
+    model.predict(dummy)
+
+    print("Model Warmed Up ⚡")
+# ---------------------------------
 
 
 # Image preprocessing
@@ -65,5 +82,5 @@ async def predict(file: UploadFile = File(...)):
         result = "Rotten Fruit"
     else:
         result = "Fresh Fruit"
-        
+
     return {"Prediction": result}
